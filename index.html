@@ -3,10 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cek Stok Paket Akrab & circle</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>Cek Stok Paket - Professional Stock Checker</title>
     <style>
         * {
             margin: 0;
@@ -15,323 +12,231 @@
         }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
             padding: 20px;
+            color: #2d3748;
+            line-height: 1.6;
         }
 
         .container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            max-width: 1200px;
+            max-width: 480px;
             margin: 0 auto;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 40px;
+            padding: 30px 0;
+            margin-bottom: 20px;
         }
 
         .header h1 {
-            font-size: 2.5rem;
+            font-size: 28px;
             font-weight: 700;
-            color: #ffffff;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
         }
 
         .header p {
-            font-size: 1.1rem;
-            color: rgba(255, 255, 255, 0.9);
-            margin-top: 8px;
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .refresh-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .refresh-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .refresh-button:active {
+            transform: translateY(0);
+        }
+
+        .refresh-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
 
         .card {
-            background: #ffffff;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-            width: 100%;
-            overflow: hidden;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
         }
 
         .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
 
         .card-header {
-            padding: 24px 32px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #f7fafc;
         }
 
-        .card-header h2 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #ffffff;
-        }
-
-        .card-body {
-            padding: 32px;
+        .package-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: #2d3748;
+            flex: 1;
         }
 
         .status-badge {
-            display: inline-flex;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-success {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+        }
+
+        .status-error {
+            background: linear-gradient(135deg, #fc8181 0%, #f56565 100%);
+            color: white;
+        }
+
+        .status-loading {
+            background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+            color: white;
+        }
+
+        .card-content {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            border-radius: 50px;
-            font-size: 0.875rem;
+            padding: 10px 0;
+        }
+
+        .info-label {
+            font-size: 13px;
+            color: #718096;
             font-weight: 500;
-            margin-bottom: 24px;
         }
 
-        .status-badge.success {
-            background: #d1fae5;
-            color: #065f46;
+        .info-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #2d3748;
         }
 
-        .status-badge.error {
-            background: #fee2e2;
-            color: #991b1b;
+        .info-value.success {
+            color: #48bb78;
         }
 
-        .status-badge.loading {
-            background: #dbeafe;
-            color: #1e40af;
+        .info-value.warning {
+            color: #ed8936;
         }
 
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: currentColor;
+        .info-value.error {
+            color: #f56565;
         }
 
-        .status-dot.pulse {
-            animation: pulse 1.5s infinite;
+        .message-box {
+            background: #f7fafc;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 8px;
+            font-size: 13px;
+            line-height: 1.5;
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
+        .message-box.success {
+            background: #f0fff4;
+            border-left: 4px solid #48bb78;
+        }
+
+        .message-box.error {
+            background: #fff5f5;
+            border-left: 4px solid #f56565;
         }
 
         .loading-spinner {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 60px 20px;
-            color: #6b7280;
-        }
-
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid #e5e7eb;
-            border-top-color: #667eea;
+            width: 18px;
+            height: 18px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
             border-radius: 50%;
-            animation: spin 1s linear infinite;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+            vertical-align: middle;
         }
 
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
 
-        .loading-spinner p {
-            margin-top: 16px;
-            font-size: 1rem;
+        .card.loading {
+            opacity: 0.7;
         }
 
-        .error-message {
-            text-align: center;
-            padding: 60px 20px;
-        }
-
-        .error-icon {
-            width: 64px;
-            height: 64px;
-            background: #fee2e2;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px;
-        }
-
-        .error-icon svg {
-            width: 32px;
-            height: 32px;
-            color: #dc2626;
-        }
-
-        .error-message h3 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #1f2937;
-            margin-bottom: 12px;
-        }
-
-        .error-message p {
-            font-size: 1rem;
-            color: #6b7280;
-            margin-bottom: 24px;
-        }
-
-        .retry-btn {
-            padding: 12px 32px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #ffffff;
-            border: none;
-            border-radius: 10px;
-            font-size: 1rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .retry-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
-        }
-
-        .table-container {
-            overflow-x: auto;
-            border-radius: 12px;
-            border: 1px solid #e5e7eb;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            white-space: nowrap;
-        }
-
-        thead {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        th {
-            padding: 16px 24px;
-            text-align: left;
-            font-weight: 600;
-            font-size: 0.875rem;
-            color: #ffffff;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        tbody tr {
-            border-bottom: 1px solid #e5e7eb;
-            transition: background-color 0.2s ease;
-        }
-
-        tbody tr:last-child {
-            border-bottom: none;
-        }
-
-        tbody tr:hover {
-            background-color: #f9fafb;
-        }
-
-        td {
-            padding: 16px 24px;
-            font-size: 0.95rem;
-            color: #374151;
-        }
-
-        td.stock-habis {
-            color: #dc2626;
-            font-weight: 600;
-        }
-
-        .stock-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-
-        .stock-badge.available {
-            background: #d1fae5;
-            color: #065f46;
-        }
-
-        .stock-badge.out {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #6b7280;
-        }
-
-        .empty-state svg {
-            width: 64px;
-            height: 64px;
-            margin: 0 auto 20px;
-            color: #d1d5db;
+        .card.loading .card-content {
+            opacity: 0.5;
+            pointer-events: none;
         }
 
         .footer {
             text-align: center;
-            margin-top: 40px;
-            padding: 20px;
+            padding: 30px 0;
+            color: #a0aec0;
+            font-size: 12px;
         }
 
-        .footer p {
-            font-size: 0.875rem;
-            color: rgba(255, 255, 255, 0.8);
+        .error-detail {
+            font-size: 12px;
+            color: #e53e3e;
+            margin-top: 8px;
+            word-break: break-word;
         }
 
-        .footer a {
-            color: #ffffff;
-            text-decoration: underline;
-            font-weight: 500;
+        .last-updated {
+            text-align: center;
+            padding: 10px;
+            color: #a0aec0;
+            font-size: 12px;
+            margin-bottom: 20px;
         }
 
-        .last-update {
-            font-size: 0.8rem;
-            color: #9ca3af;
-            margin-top: 16px;
-        }
-
-        @media (max-width: 768px) {
-            .header h1 {
-                font-size: 1.75rem;
-            }
-
-            .header p {
-                font-size: 0.95rem;
-            }
-
-            .card-body {
-                padding: 20px;
-            }
-
-            th, td {
-                padding: 12px 16px;
-                font-size: 0.875rem;
-            }
-
-            .status-badge {
-                font-size: 0.8rem;
-                padding: 6px 12px;
-            }
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+            margin: 8px 0;
         }
 
         @media (max-width: 480px) {
@@ -339,234 +244,396 @@
                 padding: 12px;
             }
 
+            .header h1 {
+                font-size: 24px;
+            }
+
             .card {
-                border-radius: 16px;
-            }
-
-            .card-header {
-                padding: 20px;
-            }
-
-            .card-header h2 {
-                font-size: 1.25rem;
-            }
-
-            .card-body {
                 padding: 16px;
             }
 
-            th, td {
-                padding: 10px 12px;
-                font-size: 0.8rem;
+            .package-name {
+                font-size: 14px;
+            }
+
+            .info-value {
+                font-size: 13px;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <header class="header">
-            <h1>Cek Stok Paket Akrab XL</h1>
-            <p>Restok akrab tiap jam 7:00 wib pagi</p>
-            <p>kalian stay ajh di sini buat mantau restok akrab</p> 
-            <p>Monitoring stok paket secara real-time</p>
-        </header>
+        <div class="header">
+            <h1>📦 Cek Stok Paket akrab & circle</h1>
+            <p>Monitoring real-time ketersediaan stok paket</p>
+        </div>
 
-        <main class="card">
-            <div class="card-header">
-                <h2>📦 Status Stok Paket akrab & circle</h2>
-            </div>
-            <div class="card-body">
-                <div id="statusBadge" class="status-badge loading">
-                    <span class="status-dot pulse"></span>
-                    <span id="statusText">Memuat data stok...</span>
-                </div>
-                <div id="contentArea"></div>
-                <div id="lastUpdate" class="last-update"></div>
-            </div>
-        </main>
+        <button class="refresh-button" id="refreshButton" onclick="checkAllStock()">
+            🔄 Refresh Data
+        </button>
+
+        <div id="stockContainer"></div>
+
+        <div class="last-updated" id="lastUpdated"></div>
+
+        <div class="footer">
+            <p>© 2025 Stock akrab & circle roby ch</p>
+        </div>
     </div>
 
-    <footer class="footer">
-        <p>Powered by <a href="https://lintaspaket.cloud">ROBY CH</a></p>
-    </footer>
-
     <script>
-        const API_URL = 'https://golang-openapi-checkpackagestockakrabglobal-xltembakservice.kmsp-store.com/v1?api_key=9ff46ba8-81ae-49d7-8465-fd9597cf12ad';
+        // API Configuration
+        const API_CONFIG = {
+            baseUrl: 'https://golang-openapi-checkpackagestock-xltembakservice.kmsp-store.com/v1',
+            apiKey: '9ff46ba8-81ae-49d7-8465-fd9597cf12ad',
+            packages: [
+            { id: 'XLBIGEXTRANEWV2', name: 'XL Big Extra New V2' },
+                { id: 'XLJUMBONEWV2', name: 'XL Jumbo New V2' },
+                { id: 'CIRCLE5TO9GBPROMO', name: 'Circle 5-9 GB Promo' },
+                { id: 'CIRCLE10TO14GBPROMO', name: 'Circle 10-14 GB Promo' },
+                { id: 'CIRCLE15TO19GBPROMO', name: 'Circle 15-19 GB Promo' },
+                { id: 'CIRCLE20TO24GBPROMO', name: 'Circle 20-24 GB Promo' },
+                { id: 'CIRCLE25TO29GBPROMO', name: 'Circle 25-29 GB Promo' },
+                { id: 'CIRCLE30TO34GBPROMO', name: 'Circle 30-34 GB Promo' },
+                { id: 'CIRCLE35TO39GBPROMO', name: 'Circle 35-39 GB Promo' },
+                { id: 'CIRCLE40TO44GBPROMO', name: 'Circle 40-44 GB Promo' },
+                { id: 'CIRCLE45TO49GBPROMO', name: 'Circle 45-49 GB Promo' },
+                { id: 'CIRCLE50TO54GBPROMO', name: 'Circle 50-54 GB Promo' },
+                { id: 'CIRCLE80TO84GBPROMO', name: 'Circle 80-84 GB Promo' }
+            ]
+        };
 
-        const statusBadge = document.getElementById('statusBadge');
-        const statusText = document.getElementById('statusText');
-        const contentArea = document.getElementById('contentArea');
-        const lastUpdate = document.getElementById('lastUpdate');
+        // Package display names mapping
+        const PACKAGE_NAMES = {
+            'XLBIGEXTRANEWV2': 'XL Big Extra New V2',
+            'XLJUMBONEWV2': 'XL Jumbo New V2',
+            'CIRCLE5TO9GBPROMO': 'Circle 5-9 GB Promo',
+            'CIRCLE10TO14GBPROMO': 'Circle 10-14 GB Promo',
+            'CIRCLE15TO19GBPROMO': 'Circle 15-19 GB Promo',
+            'CIRCLE20TO24GBPROMO': 'Circle 20-24 GB Promo',
+            'CIRCLE25TO29GBPROMO': 'Circle 25-29 GB Promo',
+            'CIRCLE30TO34GBPROMO': 'Circle 30-34 GB Promo',
+            'CIRCLE35TO39GBPROMO': 'Circle 35-39 GB Promo',
+            'CIRCLE40TO44GBPROMO': 'Circle 40-44 GB Promo',
+            'CIRCLE45TO49GBPROMO': 'Circle 45-49 GB Promo',
+            'CIRCLE50TO54GBPROMO': 'Circle 50-54 GB Promo',
+            'CIRCLE80TO84GBPROMO': 'Circle 80-84 GB Promo'
+        };
 
-        function showLoading() {
-            statusBadge.className = 'status-badge loading';
-            statusBadge.innerHTML = '<span class="status-dot pulse"></span><span>Memuat data...</span>';
-            contentArea.innerHTML = `
-                <div class="loading-spinner">
-                    <div class="spinner"></div>
-                    <p>Mengambil data stok paket...</p>
-                </div>
-            `;
-            lastUpdate.textContent = '';
+        // State management
+        let isLoading = false;
+
+        /**
+         * Validate API response
+         */
+        function validateResponse(response, data) {
+            if (!response.ok) {
+                throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+            }
+
+            if (!data || typeof data !== 'object') {
+                throw new Error('Invalid response format');
+            }
+
+            return true;
         }
 
-        function showError(message, showRetry = true) {
-            statusBadge.className = 'status-badge error';
-            statusBadge.innerHTML = '<span class="status-dot"></span><span>Terjadi kesalahan</span>';
-            let retryHtml = '';
-            if (showRetry) {
-                retryHtml = `
-                    <button class="retry-btn" onclick="fetchStockData()">
-                        🔄 Coba Lagi
-                    </button>
+        /**
+         * Format number with commas
+         */
+        function formatNumber(num) {
+            if (num === null || num === undefined) return 'N/A';
+            return num.toLocaleString('id-ID');
+        }
+
+        /**
+         * Create card element
+         */
+        function createCard(packageId, loading = false) {
+            const card = document.createElement('div');
+            card.className = `card ${loading ? 'loading' : ''}`;
+            card.id = `card-${packageId}`;
+
+            const packageName = PACKAGE_NAMES[packageId] || packageId;
+
+            if (loading) {
+                card.innerHTML = `
+                    <div class="card-header">
+                        <span class="package-name">${packageName}</span>
+                        <span class="status-badge status-loading">
+                            <span class="loading-spinner"></span>
+                            LOADING
+                        </span>
+                    </div>
+                    <div class="card-content">
+                        <div class="message-box">
+                            Memuat data dari server...
+                        </div>
+                    </div>
                 `;
             }
-            contentArea.innerHTML = `
-                <div class="error-message">
-                    <div class="error-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                    </div>
-                    <h3>Gagal Memuat Data</h3>
-                    <p>${message}</p>
-                    ${retryHtml}
-                </div>
-            `;
-            lastUpdate.textContent = '';
+
+            return card;
         }
 
-        function showSuccess(data) {
-            statusBadge.className = 'status-badge success';
-            statusBadge.innerHTML = '<span class="status-dot"></span><span>Terhubung</span>';
+        /**
+         * Update card with success data
+         */
+        function updateCardSuccess(packageId, data) {
+            const card = document.getElementById(`card-${packageId}`);
+            if (!card) return;
 
+            const packageName = PACKAGE_NAMES[packageId] || packageId;
+            const message = data.message || 'SUCCESS';
+            const supplierStock = data.real_stock_from_suppliers !== undefined ? data.real_stock_from_suppliers : 'N/A';
+
+            card.className = 'card';
+            card.innerHTML = `
+                <div class="card-header">
+                    <span class="package-name">${packageName}</span>
+                    <span class="status-badge status-success">✓ SUCCESS</span>
+                </div>
+                <div class="card-content">
+                    <div class="message-box success">
+                        ${message}
+                    </div>
+                    <div class="divider"></div>
+                    <div class="info-row">
+                        <span class="info-label">Total Stok</span>
+                        <span class="info-value">${formatNumber(supplierStock)}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * Update card with error data
+         */
+        function updateCardError(packageId, error, statusCode, code) {
+            const card = document.getElementById(`card-${packageId}`);
+            if (!card) return;
+
+            const packageName = PACKAGE_NAMES[packageId] || packageId;
+            const errorMessage = error.message || 'Terjadi kesalahan yang tidak diketahui';
+            const displayCode = code || 'UNKNOWN_ERROR';
+
+            card.className = 'card';
+            card.innerHTML = `
+                <div class="card-header">
+                    <span class="package-name">${packageName}</span>
+                    <span class="status-badge status-error">✗ ERROR</span>
+                </div>
+                <div class="card-content">
+                    <div class="message-box error">
+                        <strong>Gagal memuat data</strong>
+                        <div class="error-detail">${errorMessage}</div>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="info-row">
+                        <span class="info-label">Status Code</span>
+                        <span class="info-value error">${statusCode || 'N/A'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Error Code</span>
+                        <span class="info-value error">${displayCode}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * Fetch stock data for a single package
+         */
+        async function fetchStockData(packageId) {
+            try {
+                const url = `${API_CONFIG.baseUrl}?api_key=${API_CONFIG.apiKey}&package_id=${packageId}`;
+
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    mode: 'cors'
+                });
+
+                let data;
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    throw new Error('Failed to parse JSON response');
+                }
+
+                validateResponse(response, data);
+
+                // Check if the API response indicates failure
+                if (data.status === false || !data.data) {
+                    throw new Error(data.message || data.detail || 'API returned unsuccessful status');
+                }
+
+                return {
+                    success: true,
+                    data: data.data,
+                    message: data.message
+                };
+
+            } catch (error) {
+                console.error(`Error fetching stock for ${packageId}:`, error);
+
+                return {
+                    success: false,
+                    error: error,
+                    statusCode: error.statusCode || null,
+                    code: error.code || null
+                };
+            }
+        }
+
+        /**
+         * Check stock for a single package
+         */
+        async function checkStock(packageId) {
+            const container = document.getElementById('stockContainer');
+
+            // Create loading card if not exists
+            if (!document.getElementById(`card-${packageId}`)) {
+                const loadingCard = createCard(packageId, true);
+                container.appendChild(loadingCard);
+            } else {
+                // Update existing card to loading state
+                const existingCard = document.getElementById(`card-${packageId}`);
+                const packageName = PACKAGE_NAMES[packageId] || packageId;
+                existingCard.className = 'card loading';
+                existingCard.innerHTML = `
+                    <div class="card-header">
+                        <span class="package-name">${packageName}</span>
+                        <span class="status-badge status-loading">
+                            <span class="loading-spinner"></span>
+                            LOADING
+                        </span>
+                    </div>
+                    <div class="card-content">
+                        <div class="message-box">
+                            Memuat data dari server...
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Fetch data
+            const result = await fetchStockData(packageId);
+
+            if (result.success) {
+                updateCardSuccess(packageId, result.data);
+            } else {
+                updateCardError(
+                    packageId,
+                    result.error,
+                    result.statusCode,
+                    result.code
+                );
+            }
+        }
+
+        /**
+         * Check stock for all packages
+         */
+        async function checkAllStock() {
+            if (isLoading) return;
+
+            const refreshButton = document.getElementById('refreshButton');
+            const container = document.getElementById('stockContainer');
+
+            isLoading = true;
+            refreshButton.disabled = true;
+            refreshButton.innerHTML = '<span class="loading-spinner"></span> Memuat...';
+
+            try {
+                // Create loading cards for all packages
+                container.innerHTML = '';
+
+                for (const pkg of API_CONFIG.packages) {
+                    const loadingCard = createCard(pkg.id, true);
+                    container.appendChild(loadingCard);
+                }
+
+                // Fetch data for all packages in parallel
+                const promises = API_CONFIG.packages.map(pkg => fetchStockData(pkg.id));
+
+                const results = await Promise.all(promises);
+
+                // Update cards with results
+                results.forEach((result, index) => {
+                    const packageId = API_CONFIG.packages[index].id;
+
+                    if (result.success) {
+                        updateCardSuccess(packageId, result.data);
+                    } else {
+                        updateCardError(
+                            packageId,
+                            result.error,
+                            result.statusCode,
+                            result.code
+                        );
+                    }
+                });
+
+                // Update last updated time
+                updateLastUpdated();
+
+            } catch (error) {
+                console.error('Error in checkAllStock:', error);
+            } finally {
+                isLoading = false;
+                refreshButton.disabled = false;
+                refreshButton.innerHTML = '🔄 Refresh Data';
+            }
+        }
+
+        /**
+         * Update last updated timestamp
+         */
+        function updateLastUpdated() {
+            const lastUpdatedElement = document.getElementById('lastUpdated');
             const now = new Date();
-            const timeString = now.toLocaleString('id-ID', {
-                day: '2-digit',
-                month: 'long',
+            const options = {
                 year: 'numeric',
+                month: 'long',
+                day: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit',
                 second: '2-digit'
-            });
-            lastUpdate.textContent = `Terakhir diperbarui: ${timeString}`;
-
-            if (!data || !Array.isArray(data) || data.length === 0) {
-                contentArea.innerHTML = `
-                    <div class="empty-state">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                        </svg>
-                        <p>Belum ada data paket tersedia</p>
-                    </div>
-                `;
-                return;
-            }
-
-            let tableHtml = `
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Package ID</th>
-                                <th>Nama Paket</th>
-                                <th>Stok</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-
-            data.forEach(item => {
-                const packageId = item.packageId || item.package_id || item.id || '-';
-                const packageName = item.packageName || item.package_name || item.name || '-';
-                const stock = parseInt(item.stock || item.stok || 0);
-
-                const stockDisplay = stock === 0
-                    ? '<span class="stock-badge out">❌ HABIS</span>'
-                    : `<span class="stock-badge available">✓ ${stock}</span>`;
-
-                tableHtml += `
-                    <tr>
-                        <td>${escapeHtml(String(packageId))}</td>
-                        <td>${escapeHtml(String(packageName))}</td>
-                        <td ${stock === 0 ? 'class="stock-habis"' : ''}>${stockDisplay}</td>
-                    </tr>
-                `;
-            });
-
-            tableHtml += `
-                        </tbody>
-                    </table>
-                </div>
-            `;
-
-            contentArea.innerHTML = tableHtml;
+            };
+            lastUpdatedElement.textContent = `Terakhir diperbarui: ${now.toLocaleDateString('id-ID', options)}`;
         }
 
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        async function fetchStockData() {
+        /**
+         * Initialize app
+         */
+        function init() {
             try {
-                showLoading();
+                checkAllStock();
 
-                const response = await fetch(API_URL, {
-                    method: 'GET',
-                    cache: 'no-store'
-                });
-
-                let responseData;
-                let responseText;
-
-                try {
-                    responseText = await response.text();
-                    responseData = JSON.parse(responseText);
-                } catch (e) {
-                    throw new Error('Format response tidak valid. Mohon coba lagi.');
-                }
-
-                if (!response.ok) {
-                    const errorMsg = responseData.message || responseData.error || 'Terjadi kesalahan pada server';
-                    throw new Error(`HTTP Error ${response.status}: ${errorMsg}`);
-                }
-
-                if (!responseData || typeof responseData !== 'object') {
-                    throw new Error('Format response tidak valid');
-                }
-
-                if (responseData.status === false) {
-                    const errorMsg = responseData.message || 'Gagal mengambil data dari API';
-                    throw new Error(errorMsg);
-                }
-
-                const stockData = responseData.data || responseData.result || responseData.packages || responseData;
-
-                showSuccess(stockData);
+                // Auto refresh every 60 seconds
+                setInterval(() => {
+                    if (!isLoading) {
+                        checkAllStock();
+                    }
+                }, 180000);
 
             } catch (error) {
-                console.error('Error fetching stock data:', error);
-                let errorMessage = error.message || 'Terjadi kesalahan yang tidak diketahui';
-
-                if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
-                    errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
-                } else if (errorMessage.includes('HTTP Error')) {
-                    errorMessage = 'Server sedang bermasalah. Silakan coba lagi nanti.';
-                }
-
-                showError(errorMessage, true);
+                console.error('Error initializing app:', error);
             }
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            fetchStockData();
-        });
-
-        setInterval(function() {
-            fetchStockData();
-        }, 30000);
+        // Start the app when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
     </script>
 </body>
 </html>
+
