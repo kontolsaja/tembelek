@@ -61,6 +61,8 @@
             display: block;
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            position: relative;
+            overflow: hidden;
         }
 
         .refresh-button:hover {
@@ -78,7 +80,6 @@
             transform: none;
         }
 
-        /* Grid Layout untuk 4 Kolom */
         .stock-grid {
             display: grid;
             grid-template-columns: 1fr;
@@ -86,14 +87,12 @@
             margin-bottom: 20px;
         }
 
-        /* Tablet: 2 kolom */
         @media (min-width: 640px) {
             .stock-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
         }
 
-        /* Desktop: 4 kolom */
         @media (min-width: 1024px) {
             .stock-grid {
                 grid-template-columns: repeat(4, 1fr);
@@ -184,10 +183,6 @@
             color: #48bb78;
         }
 
-        .info-value.warning {
-            color: #ed8936;
-        }
-
         .info-value.error {
             color: #f56565;
         }
@@ -264,6 +259,46 @@
             margin: 8px 0;
         }
 
+        .progress-container {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto 16px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            height: 6px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-container.visible {
+            display: block;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+
+        .stats-text {
+            text-align: center;
+            font-size: 12px;
+            color: #718096;
+            margin-bottom: 16px;
+            min-height: 18px;
+        }
+
+
+        .retry-badge {
+            background: #ed8936;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            margin-left: 8px;
+        }
+
         @media (max-width: 480px) {
             body {
                 padding: 12px;
@@ -305,7 +340,12 @@
             🔄 Refresh Data
         </button>
 
-        <!-- Grid Container untuk 4 Kolom -->
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <div class="stats-text" id="statsText"></div>
+
         <div class="stock-grid" id="stockContainer"></div>
 
         <div class="last-updated" id="lastUpdated"></div>
@@ -320,6 +360,9 @@
         const API_CONFIG = {
             baseUrl: 'https://golang-openapi-checkpackagestock-xltembakservice.kmsp-store.com/v1',
             apiKey: '1f4c0f3d-b0c2-4414-8573-6b844e4cdb55',
+            requestTimeout: 20000,
+            maxRetries: 3,
+            retryDelay: 1000,
             packages: [
                 { id: 'XLSUPERMINIEXTRANEWV2', name: 'akrab super mini extra' },
                 { id: 'XLJUMBOMININEWV2', name: 'akrab jumbo mini' },
@@ -344,7 +387,6 @@
             ]
         };
 
-        // Package display names mapping
         const PACKAGE_NAMES = {
             'XLSUPERMINIEXTRANEWV2': 'akrab super mini extra',
             'XLJUMBOMININEWV2': 'akrab jumbo mini',
@@ -368,279 +410,441 @@
             'CIRCLE80TO84GBPROMO': 'Circle 80-84 GB Promo'
         };
 
-        // State management
         let isLoading = false;
+        let abortController = null;
+        let completedCount = 0;
+        let successCount = 0;
+        let errorCount = 0;
+        const domCache = new Map();
 
-        /**
-         * Validate API response
-         */
-        function validateResponse(response, data) {
-            if (!response.ok) {
-                throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+        function getCardElement(packageId) {
+            if (domCache.has(packageId)) {
+                return domCache.get(packageId);
             }
 
-            if (!data || typeof data !== 'object') {
-                throw new Error('Invalid response format');
+            const card = document.getElementById(`card-${packageId}`);
+            if (card) {
+                domCache.set(packageId, card);
+                return card;
             }
 
-            return true;
+            const container = document.getElementById('stockContainer');
+            const newCard = document.createElement('div');
+            newCard.className = 'card loading';
+            newCard.id = `card-${packageId}`;
+
+            const packageName = PACKAGE_NAMES[packageId] || packageId;
+
+            newCard.innerHTML = `
+                <div class="card-header">
+                    <span class="package-name">${packageName}</span>
+                    <span class="status-badge status-loading" data-status="${packageId}-status">
+                        <span class="loading-spinner"></span>
+                        LOADING
+                    </span>
+                </div>
+                <div class="card-content" data-content="${packageId}-content">
+                    <div class="message-box" data-message="${packageId}-message">
+                        Memuat data dari server...
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(newCard);
+            domCache.set(packageId, newCard);
+
+            return newCard;
         }
 
-        /**
-         * Format number with commas
-         */
+        function updateCardStatus(packageId, status, message = '', retryCount = 0) {
+            const card = getCardElement(packageId);
+            if (!card) return;
+
+            const statusBadge = card.querySelector(`[data-status="${packageId}-status"]`);
+            const messageBox = card.querySelector(`[data-message="${packageId}-message"]`);
+            const cardContent = card.querySelector(`[data-content="${packageId}-content"]`);
+
+            if (status === 'success') {
+                card.classList.remove('loading');
+                if (statusBadge) {
+                    statusBadge.className = 'status-badge status-success';
+                    statusBadge.innerHTML = '✓ SUCCESS';
+                }
+                if (messageBox) {
+                    messageBox.className = 'message-box success';
+                    messageBox.textContent = message;
+                }
+            } else if (status === 'error') {
+                card.classList.remove('loading');
+                if (statusBadge) {
+                    statusBadge.className = 'status-badge status-error';
+                    statusBadge.innerHTML = '✗ ERROR';
+                }
+                if (messageBox) {
+                    let retryInfo = retryCount > 0 ? `<span class="retry-badge">Retry: ${retryCount}</span>` : '';
+                    messageBox.className = 'message-box error';
+                    messageBox.innerHTML = `<strong>Gagal memuat data</strong>${retryInfo}<div class="error-detail">${message}</div>`;
+                }
+            } else if (status === 'loading') {
+                card.classList.add('loading');
+                if (statusBadge) {
+                    let retryInfo = retryCount > 0 ? `<span class="retry-badge">Retry: ${retryCount}</span>` : '';
+                    statusBadge.className = 'status-badge status-loading';
+                    statusBadge.innerHTML = `<span class="loading-spinner"></span> LOADING${retryInfo}`;
+                }
+                if (messageBox) {
+                    messageBox.className = 'message-box';
+                    messageBox.textContent = message || 'Memuat data dari server...';
+                }
+            }
+        }
+
+        function updateCardStockData(packageId, data) {
+            const card = getCardElement(packageId);
+            if (!card) return;
+
+            let cardContent = card.querySelector(`[data-content="${packageId}-content"]`);
+
+            const existingDivider = cardContent.querySelector('.divider');
+            const existingInfoRows = cardContent.querySelectorAll('.info-row');
+
+            if (existingDivider) existingDivider.remove();
+            existingInfoRows.forEach(row => row.remove());
+
+            const divider = document.createElement('div');
+            divider.className = 'divider';
+            cardContent.appendChild(divider);
+
+            const infoRow = document.createElement('div');
+            infoRow.className = 'info-row';
+
+            const stockValue = data.real_stock_from_suppliers !== undefined ? data.real_stock_from_suppliers :
+                               data.stock !== undefined ? data.stock :
+                               data.total_stock !== undefined ? data.total_stock :
+                               data.qty !== undefined ? data.qty :
+                               data.quantity !== undefined ? data.quantity : 'N/A';
+
+            infoRow.innerHTML = `
+                <span class="info-label">Total Stok</span>
+                <span class="info-value success">${formatNumber(stockValue)}</span>
+            `;
+            cardContent.appendChild(infoRow);
+        }
+
+        function updateCardErrorDetails(packageId, statusCode, code, apiMessage = '') {
+            const card = getCardElement(packageId);
+            if (!card) return;
+
+            let cardContent = card.querySelector(`[data-content="${packageId}-content"]`);
+
+            const existingDivider = cardContent.querySelector('.divider');
+            const existingInfoRows = cardContent.querySelectorAll('.info-row');
+
+            if (existingDivider) existingDivider.remove();
+            existingInfoRows.forEach(row => row.remove());
+
+            const divider = document.createElement('div');
+            divider.className = 'divider';
+            cardContent.appendChild(divider);
+
+            const statusCodeRow = document.createElement('div');
+            statusCodeRow.className = 'info-row';
+            statusCodeRow.innerHTML = `
+                <span class="info-label">Status Code</span>
+                <span class="info-value error">${statusCode || 'N/A'}</span>
+            `;
+            cardContent.appendChild(statusCodeRow);
+
+            const errorCodeRow = document.createElement('div');
+            errorCodeRow.className = 'info-row';
+            errorCodeRow.innerHTML = `
+                <span class="info-label">Error Code</span>
+                <span class="info-value error">${code || 'N/A'}</span>
+            `;
+            cardContent.appendChild(errorCodeRow);
+        }
+
+        function updateProgress(completed, total) {
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const statsText = document.getElementById('statsText');
+
+            const percentage = (completed / total) * 100;
+            progressBar.style.width = `${percentage}%`;
+
+            statsText.textContent = `Memuat: ${completed}/${total} paket (${successCount} berhasil, ${errorCount} gagal)`;
+
+            if (completed === total) {
+                setTimeout(() => {
+                    progressContainer.classList.remove('visible');
+                    statsText.textContent = `Selesai: ${successCount} berhasil, ${errorCount} gagal`;
+                    setTimeout(() => {
+                        statsText.textContent = '';
+                    }, 3000);
+                }, 500);
+            }
+        }
+
         function formatNumber(num) {
             if (num === null || num === undefined) return 'N/A';
             return num.toLocaleString('id-ID');
         }
 
-        /**
-         * Create card element
-         */
-        function createCard(packageId, loading = false) {
-            const card = document.createElement('div');
-            card.className = `card ${loading ? 'loading' : ''}`;
-            card.id = `card-${packageId}`;
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
 
-            const packageName = PACKAGE_NAMES[packageId] || packageId;
+        async function tryFetch(url, options, packageId, attempt = 1) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.requestTimeout);
 
-            if (loading) {
-                card.innerHTML = `
-                    <div class="card-header">
-                        <span class="package-name">${packageName}</span>
-                        <span class="status-badge status-loading">
-                            <span class="loading-spinner"></span>
-                            LOADING
-                        </span>
-                    </div>
-                    <div class="card-content">
-                        <div class="message-box">
-                            Memuat data dari server...
-                        </div>
-                    </div>
-                `;
+            if (options.signal) {
+                options.signal.addEventListener('abort', () => {
+                    clearTimeout(timeoutId);
+                    controller.abort();
+                });
             }
 
-            return card;
-        }
+            const requestOptions = {
+                ...options,
+                signal: controller.signal
+            };
 
-        /**
-         * Update card with success data
-         */
-        function updateCardSuccess(packageId, data) {
-            const card = document.getElementById(`card-${packageId}`);
-            if (!card) return;
-
-            const packageName = PACKAGE_NAMES[packageId] || packageId;
-            const message = data.message || 'SUCCESS';
-            const supplierStock = data.real_stock_from_suppliers !== undefined ? data.real_stock_from_suppliers : 'N/A';
-
-            card.className = 'card';
-            card.innerHTML = `
-                <div class="card-header">
-                    <span class="package-name">${packageName}</span>
-                    <span class="status-badge status-success">✓ SUCCESS</span>
-                </div>
-                <div class="card-content">
-                    <div class="message-box success">
-                        ${message}
-                    </div>
-                    <div class="divider"></div>
-                    <div class="info-row">
-                        <span class="info-label">Total Stok</span>
-                        <span class="info-value success">${formatNumber(supplierStock)}</span>
-                    </div>
-                </div>
-            `;
-        }
-
-        /**
-         * Update card with error data
-         */
-        function updateCardError(packageId, error, statusCode, code) {
-            const card = document.getElementById(`card-${packageId}`);
-            if (!card) return;
-
-            const packageName = PACKAGE_NAMES[packageId] || packageId;
-            const errorMessage = error.message || 'Terjadi kesalahan yang tidak diketahui';
-            const displayCode = code || 'UNKNOWN_ERROR';
-
-            card.className = 'card';
-            card.innerHTML = `
-                <div class="card-header">
-                    <span class="package-name">${packageName}</span>
-                    <span class="status-badge status-error">✗ ERROR</span>
-                </div>
-                <div class="card-content">
-                    <div class="message-box error">
-                        <strong>Gagal memuat data</strong>
-                        <div class="error-detail">${errorMessage}</div>
-                    </div>
-                    <div class="divider"></div>
-                    <div class="info-row">
-                        <span class="info-label">Status Code</span>
-                        <span class="info-value error">${statusCode || 'N/A'}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Error Code</span>
-                        <span class="info-value error">${displayCode}</span>
-                    </div>
-                </div>
-            `;
-        }
-
-        /**
-         * Fetch stock data for a single package
-         */
-        async function fetchStockData(packageId) {
             try {
-                const url = `${API_CONFIG.baseUrl}?api_key=${API_CONFIG.apiKey}&package_id=${packageId}`;
+                const response = await fetch(url, requestOptions);
+                clearTimeout(timeoutId);
 
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    mode: 'cors'
-                });
+                const responseText = await response.text();
 
                 let data;
                 try {
-                    data = await response.json();
+                    data = responseText.trim() ? JSON.parse(responseText) : null;
                 } catch (e) {
-                    throw new Error('Failed to parse JSON response');
+                    throw new Error('Gagal memparse response JSON');
                 }
 
-                validateResponse(response, data);
-
-                // Check if the API response indicates failure
-                if (data.status === false || !data.data) {
-                    throw new Error(data.message || data.detail || 'API returned unsuccessful status');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
 
-                return {
-                    success: true,
-                    data: data.data,
-                    message: data.message
-                };
+                return { success: true, data, response };
 
             } catch (error) {
-                console.error(`Error fetching stock for ${packageId}:`, error);
+                clearTimeout(timeoutId);
+
+                if (error.name === 'AbortError') {
+                    throw new Error('Request timeout - server tidak merespon');
+                }
+
+                throw error;
+            }
+        }
+
+        async function fetchStockDataWithRetry(packageId, signal) {
+            const urlVariants = [
+                { url: `${API_CONFIG.baseUrl}?api_key=${API_CONFIG.apiKey}&package_id=${packageId}`, method: 'GET' },
+                { url: `${API_CONFIG.baseUrl}/check?api_key=${API_CONFIG.apiKey}&package_id=${packageId}`, method: 'GET' },
+                { url: `${API_CONFIG.baseUrl}/stock?api_key=${API_CONFIG.apiKey}&package_id=${packageId}`, method: 'GET' },
+                { url: `${API_CONFIG.baseUrl}/${packageId}?api_key=${API_CONFIG.apiKey}`, method: 'GET' },
+                { url: `${API_CONFIG.baseUrl}`, method: 'POST', body: { api_key: API_CONFIG.apiKey, package_id: packageId } },
+                { url: `${API_CONFIG.baseUrl}/check`, method: 'POST', body: { api_key: API_CONFIG.apiKey, package_id: packageId } }
+            ];
+
+            const lastError = new Error('Gagal menghubungi server setelah beberapa percobaan');
+
+            for (const variant of urlVariants) {
+                const options = {
+                    method: variant.method,
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-API-Key': API_CONFIG.apiKey,
+                        'Authorization': `Bearer ${API_CONFIG.apiKey}`
+                    },
+                    signal: signal
+                };
+
+                if (variant.method === 'POST' && variant.body) {
+                    options.body = JSON.stringify(variant.body);
+                }
+
+                for (let retry = 1; retry <= API_CONFIG.maxRetries; retry++) {
+                    try {
+                        const result = await tryFetch(variant.url, options, packageId, retry);
+
+                        if (result.success && result.data) {
+                            const data = result.data;
+
+                            if (data.status === true && data.data) {
+                                return {
+                                    success: true,
+                                    data: data.data,
+                                    message: data.message || 'SUCCESS'
+                                };
+                            }
+
+                            if (data.real_stock_from_suppliers !== undefined ||
+                                data.stock !== undefined ||
+                                data.total_stock !== undefined ||
+                                data.qty !== undefined ||
+                                data.quantity !== undefined) {
+                                return {
+                                    success: true,
+                                    data: data,
+                                    message: data.message || 'SUCCESS'
+                                };
+                            }
+
+                            if (data.status === false) {
+                                const errorMsg = data.message || data.detail || data.error || 'API returned error';
+                                throw new Error(errorMsg);
+                            }
+
+                            return {
+                                success: true,
+                                data: data,
+                                message: 'SUCCESS'
+                            };
+                        }
+
+                    } catch (error) {
+                        lastError.message = error.message;
+                        lastError.statusCode = error.statusCode;
+                        lastError.code = error.code;
+
+                        if (retry < API_CONFIG.maxRetries) {
+                            const delay = API_CONFIG.retryDelay * retry;
+                            await sleep(delay);
+                        }
+                    }
+                }
+            }
+
+            throw lastError;
+        }
+
+        async function checkStock(packageId, index, total, signal) {
+            try {
+                const card = getCardElement(packageId);
+                updateCardStatus(packageId, 'loading', 'Memuat data dari server...', 0);
+
+                const result = await fetchStockDataWithRetry(packageId, signal);
+
+                completedCount++;
+
+                if (result.success) {
+                    successCount++;
+                    updateCardStatus(packageId, 'success', result.message || 'SUCCESS');
+                    updateCardStockData(packageId, result.data);
+                } else {
+                    errorCount++;
+                    const errorMessage = result.error?.message || 'Terjadi kesalahan yang tidak diketahui';
+                    updateCardStatus(packageId, 'error', errorMessage, API_CONFIG.maxRetries);
+                    updateCardErrorDetails(
+                        packageId,
+                        result.statusCode,
+                        result.code
+                    );
+                }
+
+                updateProgress(completedCount, total);
+
+                return result;
+
+            } catch (error) {
+                completedCount++;
+                errorCount++;
+                const errorMessage = error.message || 'Terjadi kesalahan yang tidak diketahui';
+                updateCardStatus(packageId, 'error', errorMessage, API_CONFIG.maxRetries);
+                updateCardErrorDetails(packageId, error.statusCode || null, error.code || 'REQUEST_FAILED');
+                updateProgress(completedCount, total);
 
                 return {
                     success: false,
-                    error: error,
-                    statusCode: error.statusCode || null,
-                    code: error.code || null
+                    error: error
                 };
             }
         }
 
-        /**
-         * Check stock for a single package
-         */
-        async function checkStock(packageId) {
-            const container = document.getElementById('stockContainer');
-
-            // Create loading card if not exists
-            if (!document.getElementById(`card-${packageId}`)) {
-                const loadingCard = createCard(packageId, true);
-                container.appendChild(loadingCard);
-            } else {
-                // Update existing card to loading state
-                const existingCard = document.getElementById(`card-${packageId}`);
-                const packageName = PACKAGE_NAMES[packageId] || packageId;
-                existingCard.className = 'card loading';
-                existingCard.innerHTML = `
-                    <div class="card-header">
-                        <span class="package-name">${packageName}</span>
-                        <span class="status-badge status-loading">
-                            <span class="loading-spinner"></span>
-                            LOADING
-                        </span>
-                    </div>
-                    <div class="card-content">
-                        <div class="message-box">
-                            Memuat data dari server...
-                        </div>
-                    </div>
-                `;
-            }
-
-            // Fetch data
-            const result = await fetchStockData(packageId);
-
-            if (result.success) {
-                updateCardSuccess(packageId, result.data);
-            } else {
-                updateCardError(
-                    packageId,
-                    result.error,
-                    result.statusCode,
-                    result.code
-                );
-            }
-        }
-
-        /**
-         * Check stock for all packages
-         */
         async function checkAllStock() {
             if (isLoading) return;
 
+            if (abortController) {
+                abortController.abort();
+            }
+
+            abortController = new AbortController();
+
             const refreshButton = document.getElementById('refreshButton');
             const container = document.getElementById('stockContainer');
+            const progressContainer = document.getElementById('progressContainer');
 
             isLoading = true;
             refreshButton.disabled = true;
             refreshButton.innerHTML = '<span class="loading-spinner"></span> Memuat...';
 
+            completedCount = 0;
+            successCount = 0;
+            errorCount = 0;
+
+            domCache.clear();
+
             try {
-                // Create loading cards for all packages
                 container.innerHTML = '';
+                progressContainer.classList.add('visible');
+
+                const totalPackages = API_CONFIG.packages.length;
+
+                const fragment = document.createDocumentFragment();
 
                 for (const pkg of API_CONFIG.packages) {
-                    const loadingCard = createCard(pkg.id, true);
-                    container.appendChild(loadingCard);
+                    const card = document.createElement('div');
+                    card.className = 'card loading';
+                    card.id = `card-${pkg.id}`;
+
+                    const packageName = PACKAGE_NAMES[pkg.id] || pkg.id;
+
+                    card.innerHTML = `
+                        <div class="card-header">
+                            <span class="package-name">${packageName}</span>
+                            <span class="status-badge status-loading" data-status="${pkg.id}-status">
+                                <span class="loading-spinner"></span>
+                                LOADING
+                            </span>
+                        </div>
+                        <div class="card-content" data-content="${pkg.id}-content">
+                            <div class="message-box" data-message="${pkg.id}-message">
+                                Memuat data dari server...
+                            </div>
+                        </div>
+                    `;
+
+                    fragment.appendChild(card);
+                    domCache.set(pkg.id, card);
                 }
 
-                // Fetch data for all packages in parallel
-                const promises = API_CONFIG.packages.map(pkg => fetchStockData(pkg.id));
+                container.appendChild(fragment);
 
-                const results = await Promise.all(promises);
+                const promises = API_CONFIG.packages.map((pkg, index) =>
+                    checkStock(pkg.id, index, totalPackages, abortController.signal)
+                );
 
-                // Update cards with results
-                results.forEach((result, index) => {
-                    const packageId = API_CONFIG.packages[index].id;
+                await Promise.all(promises);
 
-                    if (result.success) {
-                        updateCardSuccess(packageId, result.data);
-                    } else {
-                        updateCardError(
-                            packageId,
-                            result.error,
-                            result.statusCode,
-                            result.code
-                        );
-                    }
-                });
-
-                // Update last updated time
                 updateLastUpdated();
 
             } catch (error) {
-                console.error('Error in checkAllStock:', error);
+                if (error.name !== 'AbortError') {
+                    console.error('Error in checkAllStock:', error);
+                }
             } finally {
                 isLoading = false;
                 refreshButton.disabled = false;
                 refreshButton.innerHTML = '🔄 Refresh Data';
+                abortController = null;
             }
         }
 
-        /**
-         * Update last updated timestamp
-         */
         function updateLastUpdated() {
             const lastUpdatedElement = document.getElementById('lastUpdated');
             const now = new Date();
@@ -655,17 +859,25 @@
             lastUpdatedElement.textContent = `Terakhir diperbarui: ${now.toLocaleDateString('id-ID', options)}`;
         }
 
-        /**
-         * Initialize app
-         */
         function init() {
             try {
-                checkAllStock();
+                if ('requestIdleCallback' in window) {
+                    requestIdleCallback(() => {
+                        checkAllStock();
+                    });
+                } else {
+                    checkAllStock();
+                }
 
-                // Auto refresh every 3 minutes
                 setInterval(() => {
                     if (!isLoading) {
-                        checkAllStock();
+                        if ('requestIdleCallback' in window) {
+                            requestIdleCallback(() => {
+                                checkAllStock();
+                            });
+                        } else {
+                            checkAllStock();
+                        }
                     }
                 }, 180000);
 
@@ -674,7 +886,6 @@
             }
         }
 
-        // Start the app when DOM is ready
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', init);
         } else {
@@ -683,4 +894,3 @@
     </script>
 </body>
 </html>
-
