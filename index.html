@@ -21,7 +21,7 @@
         }
 
         .container {
-            max-width: 480px;
+            max-width: 1400px;
             margin: 0 auto;
         }
 
@@ -56,7 +56,9 @@
             border-radius: 12px;
             cursor: pointer;
             width: 100%;
-            margin-bottom: 20px;
+            max-width: 400px;
+            margin: 0 auto 20px;
+            display: block;
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
         }
@@ -76,11 +78,32 @@
             transform: none;
         }
 
+        /* Grid Layout untuk 4 Kolom */
+        .stock-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        /* Tablet: 2 kolom */
+        @media (min-width: 640px) {
+            .stock-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Desktop: 4 kolom */
+        @media (min-width: 1024px) {
+            .stock-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
         .card {
             background: white;
             border-radius: 16px;
             padding: 20px;
-            margin-bottom: 16px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             transition: all 0.3s ease;
         }
@@ -100,19 +123,21 @@
         }
 
         .package-name {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 700;
             color: #2d3748;
             flex: 1;
+            word-break: break-word;
         }
 
         .status-badge {
             padding: 6px 14px;
             border-radius: 20px;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            white-space: nowrap;
         }
 
         .status-success {
@@ -144,7 +169,7 @@
         }
 
         .info-label {
-            font-size: 13px;
+            font-size: 12px;
             color: #718096;
             font-weight: 500;
         }
@@ -172,7 +197,7 @@
             padding: 12px;
             border-radius: 8px;
             margin-top: 8px;
-            font-size: 13px;
+            font-size: 12px;
             line-height: 1.5;
         }
 
@@ -187,14 +212,14 @@
         }
 
         .loading-spinner {
-            width: 18px;
-            height: 18px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
             border-top-color: white;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
             display: inline-block;
-            margin-right: 8px;
+            margin-right: 4px;
             vertical-align: middle;
         }
 
@@ -219,7 +244,7 @@
         }
 
         .error-detail {
-            font-size: 12px;
+            font-size: 11px;
             color: #e53e3e;
             margin-top: 8px;
             word-break: break-word;
@@ -245,7 +270,7 @@
             }
 
             .header h1 {
-                font-size: 24px;
+                font-size: 22px;
             }
 
             .card {
@@ -253,11 +278,16 @@
             }
 
             .package-name {
-                font-size: 14px;
+                font-size: 12px;
             }
 
             .info-value {
                 font-size: 13px;
+            }
+
+            .status-badge {
+                font-size: 10px;
+                padding: 4px 10px;
             }
         }
     </style>
@@ -266,16 +296,17 @@
     <div class="container">
         <div class="header">
             <h1>📦 Cek Stok Paket akrab & circle</h1>
-            <P>RESTOK AKRAB setiap jam 07:00 wib pagi</P>
-            <p>ga usah nanya admin kapan restokny YG JELAS kalian pantau ajh</p>
-            <p>Monitoring real-time ketersediaan stok paket</p>
+            <p style="font-weight: 600; margin-top: 4px;">RESTOK AKRAB setiap jam 07:00 wib pagi</p>
+            <p style="font-size: 12px;">ga usah nanya admin kapan restokny YG JELAS kalian pantau ajh</p>
+            <p style="margin-top: 4px; font-size: 13px;">Monitoring real-time ketersediaan stok paket</p>
         </div>
 
         <button class="refresh-button" id="refreshButton" onclick="checkAllStock()">
             🔄 Refresh Data
         </button>
 
-        <div id="stockContainer"></div>
+        <!-- Grid Container untuk 4 Kolom -->
+        <div class="stock-grid" id="stockContainer"></div>
 
         <div class="last-updated" id="lastUpdated"></div>
 
@@ -290,7 +321,7 @@
             baseUrl: 'https://golang-openapi-checkpackagestock-xltembakservice.kmsp-store.com/v1',
             apiKey: '1f4c0f3d-b0c2-4414-8573-6b844e4cdb55',
             packages: [
-            { id: 'XLSUPERMINIEXTRANEWV2', name: 'akrab super mini extra' },
+                { id: 'XLSUPERMINIEXTRANEWV2', name: 'akrab super mini extra' },
                 { id: 'XLJUMBOMININEWV2', name: 'akrab jumbo mini' },
                 { id: 'XLMINILITENEWV2', name: 'akrab mini lite' },
                 { id: 'XLMEGABIGMININEWV2', name: 'akrab mega big mini' },
@@ -417,7 +448,7 @@
                     <div class="divider"></div>
                     <div class="info-row">
                         <span class="info-label">Total Stok</span>
-                        <span class="info-value">${formatNumber(supplierStock)}</span>
+                        <span class="info-value success">${formatNumber(supplierStock)}</span>
                     </div>
                 </div>
             `;
@@ -631,7 +662,7 @@
             try {
                 checkAllStock();
 
-                // Auto refresh every 10 seconds
+                // Auto refresh every 3 minutes
                 setInterval(() => {
                     if (!isLoading) {
                         checkAllStock();
